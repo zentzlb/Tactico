@@ -54,6 +54,7 @@ class Engine:
     @property
     def move_dict(self):
         return {'position': self.pieces,
+                'turn': self.turn,
                 'move': tuple(),
                 'capture': tuple(),
                 'guess': tuple()}
@@ -282,8 +283,8 @@ class Engine:
         piece = self.piece_dict[pos]
         if capture in piece.get_captures(self.pieces):
             enemy = self.piece_dict[capture]
-            self.moves[-1]['capture'] = (pos, capture)
             if enemy.rank == 'F':
+                self.moves[-1]['capture'] = (pos, capture, ((enemy.color, enemy.rank), ))
                 self.game_over = True
                 for piece in self.pieces:
                     piece.hidden = False
@@ -291,13 +292,16 @@ class Engine:
             winner = piece - enemy
             if winner == 1:
                 self.pieces = [pc for pc in self.pieces if pc.pos != enemy.pos]
+                self.moves[-1]['capture'] = (pos, capture, ((enemy.color, enemy.rank), ))
                 piece.pos = enemy.pos
                 print('win')
             elif winner == -1:
                 self.pieces = [pc for pc in self.pieces if pc.pos != piece.pos]
+                self.moves[-1]['capture'] = (pos, capture, ((piece.color, piece.rank), ))
                 print('lose')
             elif winner == 0:
                 self.pieces = [pc for pc in self.pieces if pc.pos not in {piece.pos, enemy.pos}]
+                self.moves[-1]['capture'] = (pos, capture, ((piece.color, piece.rank), (enemy.color, enemy.rank)))
                 print('tie')
             self.new_turn()
             return True

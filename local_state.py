@@ -5,7 +5,7 @@ from typing import Callable
 from button import Button, PieceButton, GameSquare
 from game_engine import Engine
 from game_map import MAP1
-from game_types import iPair, sPair, Color
+from game_types import iPair, sPair, Color, COLORS
 from pieces import Piece
 from functools import partial, partialmethod
 from client import Client
@@ -19,16 +19,7 @@ class LocalState:
     """
     game handler
     """
-    colors = {'red': (180, 10, 10),
-              'blue': (25, 25, 180),
-              'green': (0, 200, 0),
-              'black': (0, 0, 0),
-              'grey': (100, 100, 100),
-              'white': (255, 255, 255),
-              'purple': (200, 0, 230),
-              'yellow': (250, 200, 0),
-              'orange': (250, 100, 0)
-              }
+    colors = COLORS
     fonts = {'large': pygame.font.SysFont('Agency FB', 35),
              'medium': pygame.font.SysFont('Agency FB', 25),
              'small': pygame.font.SysFont('Agency FB', 16)}
@@ -285,7 +276,15 @@ class LocalState:
                               text=text,
                               color=color,
                               func=lambda *args, **kwargs: self.set_mode(mode))
-        self.buttons = {(0, 0): start_button}
+        other_buttons = {(team, rank):
+                             Button(self.squares_dict[(team, rank)].rect,
+                                    self.fonts,
+                                    text=rank,
+                                    color=self.colors[team.lower()],
+                                    subtext=str(self.engine.piece_count[team][rank]))
+                         for team in self.engine.piece_bank
+                         for rank in self.engine.piece_bank[team]}
+        self.buttons = {(0, 0): start_button} | other_buttons
         return
 
     def menu_buttons(self):
@@ -347,16 +346,16 @@ class LocalState:
                                Button(self.game_squares[self.guess_target].rect,
                                       self.fonts,
                                       color=self.colors['purple'],
-                                      rect_width=3,
+                                      rect_width=4,
                                       func=partial(self.submit_capture, self.selected, self.guess_target))}
-                cap_buttons = {**guesses, **capture}
+                cap_buttons = guesses | capture
 
             elif self.piece.rank == '1':
                 cap_buttons = {capture:
                                    Button(self.game_squares[capture].rect,
                                           self.fonts,
                                           color=self.colors['orange'],
-                                          rect_width=3,
+                                          rect_width=5,
                                           func=partial(self.init_guess, capture))
                                for capture in self.captures}
 
@@ -365,7 +364,7 @@ class LocalState:
                                    Button(self.game_squares[capture].rect,
                                           self.fonts,
                                           color=self.colors['purple'],
-                                          rect_width=3,
+                                          rect_width=5,
                                           func=partial(self.submit_capture, self.selected, capture))
                                for capture in self.captures}
 
@@ -395,7 +394,7 @@ class LocalState:
             other_buttons = {}
             self.guess_target = tuple()
         print(cap_buttons)
-        self.buttons = {**piece_buttons, **move_buttons, **cap_buttons, **other_buttons}
+        self.buttons = piece_buttons | move_buttons | cap_buttons | other_buttons
 
     def make_buttons(self):
         """
@@ -429,7 +428,7 @@ class LocalState:
         if self.game_mode != 'main_menu':
             rect_width = 3
             for square in self.squares_dict.values():
-                pygame.draw.rect(self.background, self.colors['white'], square.rect)
+                pygame.draw.rect(self.background, self.colors['cloud'], square.rect)
 
     def submit(self, method: str, *args) -> bool:
         """
@@ -555,7 +554,7 @@ class LocalState:
 
             for obs in self.engine.map.obstacles:
                 i, j = obs
-                pygame.draw.rect(self.window, self.colors['grey'],
+                pygame.draw.rect(self.window, self.colors['black'],
                                  (self.i2x(i, size), self.i2x(j, size), size, size))
 
             for pc in self.engine.pieces:
@@ -572,11 +571,33 @@ class LocalState:
                 pygame.draw.rect(self.window,
                                  self.colors['yellow'],
                                  self.game_squares[old_pos].rect,
-                                 width=3)
+                                 width=2)
                 pygame.draw.rect(self.window,
                                  self.colors['yellow'],
                                  self.game_squares[new_pos].rect,
-                                 width=3)
+                                 width=2)
+            if len(self.engine.moves) >= 2:
+                if capture := self.engine.moves[-2]['capture']:
+                    pos, cap, losers = capture
+                    pygame.draw.rect(self.window,
+                                     self.colors['purple'],
+                                     self.game_squares[cap].rect,
+                                     width=2)
+                    for loser in losers:
+                        pygame.draw.rect(self.window,
+                                         self.colors['purple'],
+                                         self.game_squares[loser].rect,
+                                         width=2)
+                if capture := self.engine.moves[-2]['guess']:
+                    pos, cap, guess = capture
+                    pygame.draw.rect(self.window,
+                                     self.colors['orange'],
+                                     self.game_squares[cap].rect,
+                                     width=2)
+                    pygame.draw.rect(self.window,
+                                     self.colors['orange'],
+                                     self.game_squares[(self.engine.moves[-1]['turn'], guess)].rect,
+                                     width=2)
 
         if self.selected:
             pygame.draw.rect(self.window,

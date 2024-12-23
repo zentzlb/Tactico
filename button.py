@@ -1,6 +1,6 @@
 import pygame
 from pieces import Piece
-from game_types import iPair, Color
+from game_types import iPair, Color, COLORS
 from dataclasses import dataclass
 from typing import Callable
 
@@ -9,14 +9,7 @@ class Button(pygame.FRect):
     """
     generic button
     """
-    colors = {'red': (200, 0, 0),
-              'blue': (0, 0, 200),
-              'black': (0, 0, 0),
-              'grey': (100, 100, 100),
-              'white': (255, 255, 255),
-              'purple': (200, 0, 200),
-              'yellow': (200, 200, 0)
-              }
+    colors = COLORS
 
     def __init__(self,
                  rect: tuple[float, float, float, float],
