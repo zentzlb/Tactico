@@ -566,6 +566,18 @@ class LocalState:
         for button in self.buttons.values():
             button.draw(self.window)
 
+        if self.engine.moves and self.game_mode != 'main_menu':
+            if move := self.engine.moves[-1]['move'] or self.engine.moves[-min(2, len(self.engine.moves))]['move']:
+                old_pos, new_pos = move
+                pygame.draw.rect(self.window,
+                                 self.colors['yellow'],
+                                 self.game_squares[old_pos].rect,
+                                 width=3)
+                pygame.draw.rect(self.window,
+                                 self.colors['yellow'],
+                                 self.game_squares[new_pos].rect,
+                                 width=3)
+
         if self.selected:
             pygame.draw.rect(self.window,
                              self.colors['green'],

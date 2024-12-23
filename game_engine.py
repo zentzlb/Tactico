@@ -35,6 +35,7 @@ class Engine:
         self.color_map = {1: 'Red', -1: 'Blue'}
         self._turn_sign = 1
         self.move: iPair | tuple = tuple()
+        self.moves: list[dict] = []
         self.pieces: list[Piece] = []
         self.setup = True
         self.game_over = False
@@ -49,6 +50,13 @@ class Engine:
         """
         print(team)
         return range(*self.map.__getattribute__(f'{dim}_{team.lower()}_deploy'))
+
+    @property
+    def move_dict(self):
+        return {'position': self.pieces,
+                'move': tuple(),
+                'capture': tuple(),
+                'guess': tuple()}
 
     @property
     def data(self) -> dict:
@@ -151,6 +159,8 @@ class Engine:
         if self.setup and sum(self.piece_bank['Red'].values()) + sum(self.piece_bank['Blue'].values()) == 0:
             self.setup = False
             self._turn_sign = 1
+        if not self.setup:
+            self.moves.append(self.move_dict)
         print(f"it is now {self.turn}'s turn")
         return True
 
@@ -209,6 +219,7 @@ class Engine:
 
         elif self.check_move(old_pos, new_pos):
             self.place_piece(old_pos, new_pos)
+            self.moves[-1]['move'] = (old_pos, new_pos)
             self.move = new_pos
             return True
         return False
@@ -244,6 +255,7 @@ class Engine:
             return False
         if capture in piece.get_captures(self.pieces):
             enemy = self.piece_dict[capture]
+            self.moves[-1]['guess'] = (pos, capture, guess)
             if piece.guess_piece(guess, enemy):
                 if enemy.rank == 'F':
                     self.game_over = True
@@ -270,6 +282,7 @@ class Engine:
         piece = self.piece_dict[pos]
         if capture in piece.get_captures(self.pieces):
             enemy = self.piece_dict[capture]
+            self.moves[-1]['capture'] = (pos, capture)
             if enemy.rank == 'F':
                 self.game_over = True
                 for piece in self.pieces:
