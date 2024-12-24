@@ -41,7 +41,7 @@ class Server:
         message from red player
         :return: message from Red
         """
-        if (addr := self.players['Red']['addr']) in self.player_msg:
+        if self.players['Red'] and (addr := self.players['Red']['addr']) in self.player_msg:
             return self.player_msg[addr]
 
     @property
@@ -50,7 +50,7 @@ class Server:
         message from blue player
         :return: message from Blue
         """
-        if (addr := self.players['Blue']['addr']) in self.player_msg:
+        if self.players['Blue'] and (addr := self.players['Blue']['addr']) in self.player_msg:
             return self.player_msg[addr]
 
     def __getitem__(self, item: str):

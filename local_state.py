@@ -5,7 +5,7 @@ from typing import Callable
 from button import Button, PieceButton, GameSquare
 from game_engine import Engine
 from game_map import MAP1
-from game_types import iPair, sPair, Color, COLORS
+from game_types import iPair, sPair, Color, COLORS, RULES
 from pieces import Piece
 from functools import partial, partialmethod
 from client import Client
@@ -219,7 +219,6 @@ class LocalState:
         :param args:
         :param kwargs:
         """
-        print(mode)
         if mode in self.modes:
             if self.game_mode == 'waiting' and mode == 'main_menu':
                 self.engine.restart()
@@ -291,7 +290,7 @@ class LocalState:
         """
         make main menu buttons
         """
-        x_start = 100
+        x_start = 70
         y_start = 100
         height = self.fonts['large'].get_height() + 20
         width = 200
@@ -303,7 +302,7 @@ class LocalState:
                                        self.fonts,
                                        text=option,
                                        color=self.colors['red'],
-                                       text_color=self.colors['blue'],
+                                       text_color=self.colors['yellow'],
                                        func=self.main_menu[option])
                         for i, option in enumerate(self.main_menu)}
 
@@ -329,7 +328,6 @@ class LocalState:
                         for move in self.moves}
 
         if not self.engine.setup and self.is_piece:
-            print(self.guess_target)
             if self.guess_target:
                 guesses = {(team := self.opponent, rank):
                                Button(self.game_squares[(team, rank)].rect,
@@ -393,7 +391,6 @@ class LocalState:
         else:
             other_buttons = {}
             self.guess_target = tuple()
-        print(cap_buttons)
         self.buttons = piece_buttons | move_buttons | cap_buttons | other_buttons
 
     def make_buttons(self):
@@ -437,10 +434,6 @@ class LocalState:
         :param args: submission arguments
         :return: submission success
         """
-        print()
-        print(f"{method=}")
-        print(f"{args=}")
-        print()
         if self.game_mode == "single_player":
             return self.engine.__getattribute__(method)(*args)
         if self.client:
@@ -455,7 +448,6 @@ class LocalState:
         :param new_pos: new position
         :return:
         """
-        print('submitted')
         # if self.engine.make_move(old_pos, new_pos):
         if self.submit('make_move', old_pos, new_pos):
             self.selected = new_pos
@@ -542,6 +534,15 @@ class LocalState:
         yt = rect.centery - text_surface.get_height() / 2
         self.window.blit(text_surface, (xt, yt))
 
+    def draw_rules(self):
+        xt = 400
+        yt = 100
+        text_surface = self.fonts['small'].render(RULES,
+                                                  antialias=True,
+                                                  color=self.colors['yellow'],
+                                                  wraplength=self.size[0] - xt - 50)
+        self.window.blit(text_surface, (xt, yt))
+
     def draw(self):
 
         self.window.blit(self.background, (0, 0))
@@ -561,6 +562,9 @@ class LocalState:
                 if (pc.color != engine.turn or self.engine.setup or self.game_mode == 'waiting' or
                         (self.game_mode in ('Red', 'Blue') and pc.color != self.game_mode)):
                     self.draw_piece(pc)
+
+        else:
+            self.draw_rules()
 
         for button in self.buttons.values():
             button.draw(self.window)

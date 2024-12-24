@@ -57,7 +57,6 @@ class Client:
                 try:
                     self.data = receiver_protocol(s)
                     self.up()
-                    print(self.data)
                 except (EOFError, ConnectionResetError) as e:
                     print(e)
                     s.close()

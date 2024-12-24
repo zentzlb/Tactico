@@ -5,6 +5,22 @@ from typing import Callable
 from functools import wraps
 import pickle
 
+STRENGTH = {
+    '10': 10,
+    '9': 9,
+    '8': 8,
+    '7': 8,
+    '6': 7,
+    '5': 5,
+    '4': 4,
+    '3': 5,
+    '2': 3,
+    '1': 8,
+    'S': 1,
+    'M': 2,
+    'F': 0,
+}
+
 
 class Engine:
     """
@@ -48,7 +64,6 @@ class Engine:
         :param dim: 'x' or 'y'
         :return:
         """
-        print(team)
         return range(*self.map.__getattribute__(f'{dim}_{team.lower()}_deploy'))
 
     @property
@@ -79,6 +94,14 @@ class Engine:
                         for rank in self.total_pieces},
                 'Blue': {rank: self.total_pieces[rank] - self.count_pieces('Blue', rank)
                          for rank in self.total_pieces}}
+
+    @property
+    def strength(self) -> dict[str, float]:
+        return {'Red': sum([STRENGTH[piece.rank] if piece.hidden else STRENGTH[piece.rank] / 2
+                            for piece in self.pieces if piece.color == 'Red']),
+                'Blue': sum([STRENGTH[piece.rank] if piece.hidden else STRENGTH[piece.rank] / 2
+                            for piece in self.pieces if piece.color == 'Blue'])
+                }
 
     @property
     def piece_count(self) -> dict[str, [dict[str, [int]]]]:
