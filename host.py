@@ -136,6 +136,7 @@ if __name__ == '__main__':
                   Piece('9', (0, 7), color='Blue'),
                   Piece('M', (1, 7), color='Blue'),]
                   # Piece('M', (2, 7), color='Blue')]
+
     G = Host(Server(5555), ENG)
 
     while True:

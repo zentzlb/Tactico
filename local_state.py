@@ -345,7 +345,7 @@ class LocalState:
                 capture = {self.guess_target:
                                Button(self.game_squares[self.guess_target].rect,
                                       self.fonts,
-                                      color=self.colors['purple'],
+                                      color=self.colors['white'],
                                       rect_width=4,
                                       func=partial(self.submit_capture, self.selected, self.guess_target))}
                 cap_buttons = guesses | capture
@@ -363,7 +363,7 @@ class LocalState:
                 cap_buttons = {capture:
                                    Button(self.game_squares[capture].rect,
                                           self.fonts,
-                                          color=self.colors['purple'],
+                                          color=self.colors['white'],
                                           rect_width=5,
                                           func=partial(self.submit_capture, self.selected, capture))
                                for capture in self.captures}
@@ -580,12 +580,12 @@ class LocalState:
                 if capture := self.engine.moves[-2]['capture']:
                     pos, cap, losers = capture
                     pygame.draw.rect(self.window,
-                                     self.colors['purple'],
+                                     self.colors['white'],
                                      self.game_squares[cap].rect,
                                      width=2)
                     for loser in losers:
                         pygame.draw.rect(self.window,
-                                         self.colors['purple'],
+                                         self.colors['white'],
                                          self.game_squares[loser].rect,
                                          width=2)
                 if capture := self.engine.moves[-2]['guess']:
