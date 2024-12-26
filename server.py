@@ -112,9 +112,12 @@ class Server:
         while True:
 
             try:
-                self.player_msg[addr] = receiver_protocol(conn)
-                self.up()
-                print(self.player_msg[addr])
+                if (msg := receiver_protocol(conn)) == 'resend':
+                    self.send_all()
+                else:
+                    self.player_msg[addr] = msg
+                    self.up()
+                    print(self.player_msg[addr])
             except EOFError:
                 print('EOF error, get help')
                 return

@@ -1,6 +1,7 @@
 from typing import Callable, Any
 import socket
 import pickle
+import datetime
 
 
 def transmitter_protocol(sock: socket.socket, data: Any):
@@ -33,7 +34,15 @@ def receiver_protocol(sock: socket.socket) -> Any:
             try:
                 return package.decode("utf-8")[:-1]
             except UnicodeDecodeError:
+                transmitter_protocol(sock, 'resend'.encode())
                 print('Corrupted Data')
+                log_error(package)
     except ConnectionAbortedError:
         print('Connection Aborted')
+
+
+def log_error(data: bytes):
+    with open(f"/error_log/log_{datetime.datetime.today():%H_%M_%S}", "wb") as file:
+        file.write(data)
+
 

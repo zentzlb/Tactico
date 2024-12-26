@@ -29,7 +29,8 @@ class Client:
 
     def close(self):
         self.listen = False
-        self.socket.close()
+        if self.socket:
+            self.socket.close()
         self.socket = None
 
     def threaded_client(self):
@@ -47,7 +48,9 @@ class Client:
                 except socket.error as e:
                     print(e)
                     # self.socket = None
-                    time.sleep(1)
+                    run = False
+                    self.close()
+                    # time.sleep(1)
                 except EOFError as e:
                     print(e)
                     # self.socket = None

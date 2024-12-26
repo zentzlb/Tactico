@@ -11,6 +11,7 @@ from functools import partial, partialmethod
 from client import Client
 from collections import defaultdict
 import socket
+import pickle
 
 pygame.init()
 
@@ -29,9 +30,9 @@ class LocalState:
         self.run = True
         self.size = size
         self.engine = my_engine
-        self.game_mode = 'main_menu'
-        self.modes = {'main_menu', 'single_player', 'waiting', 'Red', 'Blue'}
-        self.main_menu = {'Single Player': partial(self.set_mode, 'single_player'),
+        self.game_mode = 'main menu'
+        self.modes = {'main menu', 'single player', 'waiting', 'review', 'Red', 'Blue'}
+        self.main_menu = {'Single Player': partial(self.set_mode, 'single player'),
                           'Multiplayer': lambda *args, **kwargs: self.connect(),
                           'Quit': lambda *args, **kwargs: self.quit()}
         self.window = pygame.display.set_mode(size)
@@ -49,9 +50,9 @@ class LocalState:
         local player team color -> 'Red' or 'Blue'
         """
         match self.game_mode:
-            case 'main_menu':
+            case 'main menu':
                 return ''
-            case 'single_player':
+            case 'single player':
                 return self.engine.turn
             case _:
                 return self.game_mode
@@ -74,7 +75,7 @@ class LocalState:
         """
         if self.selected in self.buttons and not self.engine.move:
             if type(button := self.buttons[self.selected]) is PieceButton and not self.engine.setup:
-                positions = {*{piece.pos for piece in self.engine.pieces}, *self.engine.map.obstacles}
+                positions = {*{piece.pos for piece in self.engine.position}, *self.engine.map.obstacles}
                 return button.piece.get_moves(positions,
                                               self.engine.map.x_range,
                                               self.engine.map.y_range)
@@ -99,7 +100,7 @@ class LocalState:
         NEED TO REFERENCE ENGINE.MOVE
         """
         if self.is_piece:
-            return self.piece.get_captures(self.engine.pieces)
+            return self.piece.get_captures(self.engine.position)
         return []
 
     @property
@@ -182,7 +183,7 @@ class LocalState:
         if self.set_mode(self.client.team):
             self.update()
             return True
-        self.set_mode('main_menu')
+        self.set_mode('main menu')
         return False
 
     def update(self):
@@ -203,7 +204,7 @@ class LocalState:
         if self.client:
             self.client.close()
             self.client = None
-        self.set_mode('main_menu')
+        self.set_mode('main menu')
 
     def quit(self):
         """
@@ -219,8 +220,9 @@ class LocalState:
         :param args:
         :param kwargs:
         """
+        self.selected = tuple()
         if mode in self.modes:
-            if self.game_mode == 'waiting' and mode == 'main_menu':
+            if mode == 'main menu':
                 self.engine.restart()
             self.game_mode = mode
             self.make_background()
@@ -263,11 +265,11 @@ class LocalState:
 
         if self.engine.game_over:
             text = 'main menu'
-            mode = 'main_menu'
+            mode = 'main menu'
             color = self.colors['green']
         else:
             text = 'begin turn'
-            mode = 'single_player'
+            mode = 'single player'
             color = self.colors[self.engine.turn.lower()]
 
         start_button = Button((10, y, 150, h),
@@ -316,7 +318,7 @@ class LocalState:
                                              self.colors['black'],
                                              self.fonts,
                                              func=self.piece_fn)
-                         for pc in self.engine.pieces
+                         for pc in self.engine.position
                          if pc.color == self.team}
 
         move_buttons = {move:
@@ -391,6 +393,13 @@ class LocalState:
         else:
             other_buttons = {}
             self.guess_target = tuple()
+        y = self.window.get_height() - self.fonts['large'].get_height() - 20
+        h = self.fonts['large'].get_height() + 10
+        other_buttons |= {(-1, -1): Button((10, y, 150, h),
+                                           self.fonts,
+                                           text='main menu',
+                                           color=self.colors['grey'],
+                                           func=lambda *args, **kwargs: self.set_mode('main menu'))}
         self.buttons = piece_buttons | move_buttons | cap_buttons | other_buttons
 
     def make_buttons(self):
@@ -398,9 +407,9 @@ class LocalState:
         makes buttons based on game mode
         """
         match self.game_mode:
-            case 'main_menu':
+            case 'main menu':
                 self.menu_buttons()
-            case 'single_player':
+            case 'single player':
                 self.game_buttons()
             case 'waiting':
                 self.wait_buttons()
@@ -422,7 +431,7 @@ class LocalState:
         :return:
         """
         self.background.fill(self.colors['black'])
-        if self.game_mode != 'main_menu':
+        if self.game_mode != 'main menu':
             rect_width = 3
             for square in self.squares_dict.values():
                 pygame.draw.rect(self.background, self.colors['cloud'], square.rect)
@@ -434,7 +443,7 @@ class LocalState:
         :param args: submission arguments
         :return: submission success
         """
-        if self.game_mode == "single_player":
+        if self.game_mode == 'single player':
             return self.engine.__getattribute__(method)(*args)
         if self.client:
             return self.client.transmit((method, *args))
@@ -467,7 +476,7 @@ class LocalState:
         # if self.engine.make_capture(pos, capture):
         if self.submit('make_capture', pos, capture):
             self.selected = tuple()
-            if self.game_mode == 'single_player' or self.engine.game_over:
+            if self.game_mode == 'single player' or self.engine.game_over:
                 self.set_mode('waiting')
             self.make_buttons()
 
@@ -482,14 +491,14 @@ class LocalState:
         if self.submit('make_guess', pos, capture, guess):
             self.selected = tuple()
             self.make_buttons()
-            if self.game_mode == 'single_player':
+            if self.game_mode == 'single player':
                 self.set_mode('waiting')
 
     def end_turn(self):
         if self.submit('new_turn'):
             if self.game_mode == 'waiting':
                 return
-            if self.game_mode == 'single_player':
+            if self.game_mode == 'single player':
                 self.set_mode('waiting')
 
             self.selected = tuple()
@@ -513,7 +522,8 @@ class LocalState:
         i, j = piece.pos
         rect = pygame.Rect(self.i2x(i, size), self.i2x(j, size), size, size)
         pygame.draw.rect(self.window, self.colors[piece.color.lower()], rect)
-        if not piece.hidden or self.team == piece.color:
+        if (not piece.hidden or self.team == piece.color or
+                (self.engine.game_over and self.engine.turn == piece.color)):
             text_surface = self.fonts['large'].render(piece.rank,
                                                       True,
                                                       self.colors['black'])
@@ -551,14 +561,14 @@ class LocalState:
         size = self.length * 0.9
         rect_width = 3
 
-        if self.game_mode != 'main_menu':
+        if self.game_mode != 'main menu':
 
             for obs in self.engine.map.obstacles:
                 i, j = obs
                 pygame.draw.rect(self.window, self.colors['black'],
                                  (self.i2x(i, size), self.i2x(j, size), size, size))
 
-            for pc in self.engine.pieces:
+            for pc in self.engine.position:
                 if (pc.color != engine.turn or self.engine.setup or self.game_mode == 'waiting' or
                         (self.game_mode in ('Red', 'Blue') and pc.color != self.game_mode)):
                     self.draw_piece(pc)
@@ -569,8 +579,9 @@ class LocalState:
         for button in self.buttons.values():
             button.draw(self.window)
 
-        if self.engine.moves and self.game_mode != 'main_menu':
-            if move := self.engine.moves[-1]['move'] or self.engine.moves[-min(2, len(self.engine.moves))]['move']:
+        if self.engine.history and self.game_mode != 'main menu':
+            if move := (self.engine.history[self.engine.i]['move'] or
+                        self.engine.history[self.engine.i - 1 if self.engine.i > 1 else 0]['move']):
                 old_pos, new_pos = move
                 pygame.draw.rect(self.window,
                                  self.colors['yellow'],
@@ -580,8 +591,8 @@ class LocalState:
                                  self.colors['yellow'],
                                  self.game_squares[new_pos].rect,
                                  width=2)
-            if len(self.engine.moves) >= 2:
-                if capture := self.engine.moves[-2]['capture']:
+            if self.engine.i > 0 or self.engine.game_over:
+                if capture := self.engine.history[self.engine.i if self.game_mode else self.engine.i - 1]['capture']:
                     pos, cap, losers = capture
                     pygame.draw.rect(self.window,
                                      self.colors['white'],
@@ -592,7 +603,7 @@ class LocalState:
                                          self.colors['white'],
                                          self.game_squares[loser].rect,
                                          width=2)
-                if capture := self.engine.moves[-2]['guess']:
+                if capture := self.engine.history[self.engine.i if self.game_mode else self.engine.i - 1]['guess']:
                     pos, cap, guess = capture
                     pygame.draw.rect(self.window,
                                      self.colors['orange'],
@@ -600,7 +611,7 @@ class LocalState:
                                      width=2)
                     pygame.draw.rect(self.window,
                                      self.colors['orange'],
-                                     self.game_squares[(self.engine.moves[-1]['turn'], guess)].rect,
+                                     self.game_squares[(self.engine.history[-1]['turn'], guess)].rect,
                                      width=2)
 
         if self.selected:
@@ -644,6 +655,15 @@ class LocalState:
                     if keys[pygame.K_ESCAPE]:
                         self.end_turn()
                         print('new turn')
+                    if keys[pygame.K_LEFT] and self.engine.game_over:
+                        self.engine.inc_down()
+                        print(engine.position)
+                        self.make_buttons()
+
+                    if keys[pygame.K_RIGHT] and self.engine.game_over:
+                        self.engine.inc_up()
+                        print(engine.position)
+                        self.make_buttons()
 
 
 if __name__ == '__main__':
@@ -681,12 +701,12 @@ if __name__ == '__main__':
                      Piece('5', (3, 0), color='Red'),
                      Piece('6', (2, 0), color='Red'),
                      Piece('8', (1, 0), color='Red'),
-                     Piece('1', (8, 5), color='Blue'),
                      Piece('1', (0, 5), color='Blue'),
-                     Piece('S', (1, 5), color='Blue'),
+                     Piece('1', (8, 5), color='Blue'),
+                     Piece('S', (9, 7), color='Blue'),
                      Piece('M', (9, 6), color='Blue'),
                      Piece('M', (8, 7), color='Blue'),
-                     Piece('F', (9, 7), color='Blue'),
+                     Piece('F', (1, 5), color='Blue'),
                      Piece('7', (5, 5), color='Blue'),
                      Piece('6', (4, 5), color='Blue'),
                      Piece('6', (3, 5), color='Blue'),
@@ -709,5 +729,7 @@ if __name__ == '__main__':
                      Piece('9', (0, 7), color='Blue'),
                      Piece('M', (1, 7), color='Blue'),
                      Piece('M', (2, 7), color='Blue')]
+    # engine.setup = False
+    # engine.history.append(engine.move_dict)
     ls = LocalState(engine, (700, 700))
     ls.game_loop()
