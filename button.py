@@ -16,6 +16,7 @@ class Button(pygame.FRect):
                  fonts: dict[str, pygame.font.Font],
                  text: str = '',
                  subtext: str = '',
+                 image: pygame.Surface | None = None,
                  rect_width: int = 0,
                  text_color: Color = (0, 0, 0),
                  color: Color = (100, 100, 100),
@@ -25,6 +26,7 @@ class Button(pygame.FRect):
         self.rect_width = rect_width
         self.text_color = text_color
         self.text = text
+        self.image = image
         self.subtext = subtext
         self.fonts = fonts
         self.func = func
@@ -44,14 +46,16 @@ class Button(pygame.FRect):
         :return:
         """
         pygame.draw.rect(surf, self.color, self, width=self.rect_width)
-        self.draw_text(surf)
+        if self.image:
+            self.draw_image(surf)
+        else:
+            self.draw_text(surf)
         self.draw_subtext(surf)
 
     def draw_text(self, surf: pygame.Surface) -> None:
         """
         blits text onto surface centered on centerx, centery
         :param surf: surface to blit onto
-        :return:
         """
         # if self.text_color != (0, 0, 0):
         #     print(self.text_color)
@@ -62,6 +66,15 @@ class Button(pygame.FRect):
             xt = self.centerx - text_surface.get_width() / 2
             yt = self.centery - text_surface.get_height() / 2
             surf.blit(text_surface, (xt, yt))
+
+    def draw_image(self, surf: pygame.Surface):
+        """
+        blits image onto surface centered on centerx, centery
+        :param surf: surface to blit onto
+        """
+        xt = self.centerx - self.image.get_width() / 2
+        yt = self.centery - self.image.get_height() / 2
+        surf.blit(self.image, (xt, yt))
 
     def draw_subtext(self, surf: pygame.Surface) -> None:
         """
@@ -92,21 +105,20 @@ class PieceButton(Button):
     """
     rectangle object to represent game piece
     """
-
-    # colors = {'Red': (200, 0, 0), 'Blue': (0, 0, 200)}
-
     def __init__(self,
                  rect: tuple[float, float, float, float],
                  piece: Piece,
                  text_color: Color,
                  fonts: dict[str, pygame.font.Font],
                  rect_width: int = 0,
+                 image: pygame.Surface | None = None,
                  func: Callable = lambda: None):
         super().__init__(rect,
                          fonts,
                          text=piece.rank,
                          text_color=text_color,
                          rect_width=rect_width,
+                         image=image,
                          func=func)
         self.piece = piece
 

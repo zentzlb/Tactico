@@ -28,6 +28,7 @@ class LocalState:
     def __init__(self, my_engine: Engine, size: iPair, client_: Client = None):
 
         self.run = True
+        self.draw_image = False
         self.size = size
         self.engine = my_engine
         self.game_mode = 'main menu'
@@ -43,6 +44,7 @@ class LocalState:
         self.guess_target: iPair | sPair | tuple = tuple()
         self.client = client_
         self.make_background()
+        self.images = {rank: pygame.image.load(f"assets\\{rank}.png") for rank in self.engine.total_pieces}
 
     @property
     def team(self) -> str:
@@ -197,6 +199,13 @@ class LocalState:
                 self.set_mode('waiting')
             self.make_buttons()
 
+    def switch(self):
+        """
+        toggles piece rendering
+        """
+        self.draw_image = not self.draw_image
+        self.make_buttons()
+
     def end(self):
         """
         handles Client connection loss
@@ -263,10 +272,35 @@ class LocalState:
         y = self.window.get_height() - self.fonts['large'].get_height() - 20
         h = self.fonts['large'].get_height() + 10
 
+        other_buttons = {(team, rank):
+                             Button(self.squares_dict[(team, rank)].rect,
+                                    self.fonts,
+                                    text=rank,
+                                    color=self.colors[team.lower()],
+                                    image=self.images[rank] if self.draw_image else None,
+                                    subtext=str(self.engine.piece_count[team][rank]))
+                         for team in self.engine.piece_bank
+                         for rank in self.engine.piece_bank[team]}
+
         if self.engine.game_over:
-            text = 'main menu'
+            text = 'Main Menu'
             mode = 'main menu'
             color = self.colors['green']
+
+            back_button = Button((10 + 170 + h, y, h, h),
+                                 self.fonts,
+                                 text='<',
+                                 color=self.colors['grey'],
+                                 func=lambda *args, **kwargs: self.engine.inc_down())
+
+            forward_button = Button((10 + 180 + 2 * h, y, h, h),
+                                    self.fonts,
+                                    text='>',
+                                    color=self.colors['grey'],
+                                    func=lambda *args, **kwargs: self.engine.inc_up())
+
+            other_buttons |= {(-3, -3): back_button, (-4, -4): forward_button}
+
         else:
             text = 'begin turn'
             mode = 'single player'
@@ -277,15 +311,14 @@ class LocalState:
                               text=text,
                               color=color,
                               func=lambda *args, **kwargs: self.set_mode(mode))
-        other_buttons = {(team, rank):
-                             Button(self.squares_dict[(team, rank)].rect,
-                                    self.fonts,
-                                    text=rank,
-                                    color=self.colors[team.lower()],
-                                    subtext=str(self.engine.piece_count[team][rank]))
-                         for team in self.engine.piece_bank
-                         for rank in self.engine.piece_bank[team]}
-        self.buttons = {(0, 0): start_button} | other_buttons
+        switch_button = Button((10 + 160, y, h, h),
+                               self.fonts,
+                               text=chr(164),
+                               color=self.colors['purple'],
+                               func=lambda *args, **kwargs: self.switch())
+
+        self.buttons = {(-1, -1): start_button,
+                        (-2, -2): switch_button} | other_buttons
         return
 
     def menu_buttons(self):
@@ -317,6 +350,7 @@ class LocalState:
                                              pc,
                                              self.colors['black'],
                                              self.fonts,
+                                             image=self.images[pc.rank] if self.draw_image else None,
                                              func=self.piece_fn)
                          for pc in self.engine.position
                          if pc.color == self.team}
@@ -337,6 +371,7 @@ class LocalState:
                                       text=rank,
                                       color=self.colors[team.lower()],
                                       subtext=str(self.engine.piece_count[team][rank]),
+                                      image=self.images[rank] if self.draw_image else None,
                                       func=partial(self.submit_guess,
                                                    self.selected,
                                                    self.guess_target,
@@ -377,6 +412,7 @@ class LocalState:
                                         text=rank,
                                         color=self.colors[team.lower()],
                                         subtext=str(self.engine.piece_bank[team][rank]),
+                                        image=self.images[rank] if self.draw_image else None,
                                         func=partial(self.bank_fn, team))
                              for rank in self.engine.piece_bank[self.team]}
 
@@ -386,6 +422,7 @@ class LocalState:
                                         self.fonts,
                                         text=rank,
                                         color=self.colors[team.lower()],
+                                        image=self.images[rank] if self.draw_image else None,
                                         subtext=str(self.engine.piece_count[team][rank]))
                              for team in self.engine.piece_bank
                              for rank in self.engine.piece_bank[team]}
@@ -397,9 +434,14 @@ class LocalState:
         h = self.fonts['large'].get_height() + 10
         other_buttons |= {(-1, -1): Button((10, y, 150, h),
                                            self.fonts,
-                                           text='main menu',
+                                           text='Main Menu',
                                            color=self.colors['grey'],
-                                           func=lambda *args, **kwargs: self.set_mode('main menu'))}
+                                           func=lambda *args, **kwargs: self.set_mode('main menu')),
+                          (-2, -2): Button((10 + 160, y, h, h),
+                                           self.fonts,
+                                           text=chr(164),
+                                           color=self.colors['purple'],
+                                           func=lambda *args, **kwargs: self.switch())}
         self.buttons = piece_buttons | move_buttons | cap_buttons | other_buttons
 
     def make_buttons(self):
@@ -522,14 +564,19 @@ class LocalState:
         i, j = piece.pos
         rect = pygame.Rect(self.i2x(i, size), self.i2x(j, size), size, size)
         pygame.draw.rect(self.window, self.colors[piece.color.lower()], rect)
-        if (not piece.hidden or self.team == piece.color or
-                (self.engine.game_over and self.engine.turn == piece.color)):
-            text_surface = self.fonts['large'].render(piece.rank,
-                                                      True,
-                                                      self.colors['black'])
-            xt = rect.centerx - text_surface.get_width() / 2
-            yt = rect.centery - text_surface.get_height() / 2
-            self.window.blit(text_surface, (xt, yt))
+        if not piece.hidden or self.team == piece.color or self.engine.game_over:
+            if self.draw_image:
+                image = self.images[piece.rank]
+                xt = rect.centerx - image.get_width() / 2
+                yt = rect.centery - image.get_height() / 2
+                self.window.blit(image, (xt, yt))
+            else:
+                text_surface = self.fonts['large'].render(piece.rank,
+                                                          True,
+                                                          self.colors['black'])
+                xt = rect.centerx - text_surface.get_width() / 2
+                yt = rect.centery - text_surface.get_height() / 2
+                self.window.blit(text_surface, (xt, yt))
 
     def draw_rect(self, rect: pygame.Rect, color: str, text: str = '', width: int = 0):
         pygame.draw.rect(self.window,
@@ -592,7 +639,8 @@ class LocalState:
                                  self.game_squares[new_pos].rect,
                                  width=2)
             if self.engine.i > 0 or self.engine.game_over:
-                if capture := self.engine.history[self.engine.i if self.game_mode else self.engine.i - 1]['capture']:
+                if capture := self.engine.history[self.engine.i if self.engine.game_over
+                else self.engine.i - 1]['capture']:
                     pos, cap, losers = capture
                     pygame.draw.rect(self.window,
                                      self.colors['white'],
@@ -603,7 +651,8 @@ class LocalState:
                                          self.colors['white'],
                                          self.game_squares[loser].rect,
                                          width=2)
-                if capture := self.engine.history[self.engine.i if self.game_mode else self.engine.i - 1]['guess']:
+                if capture := self.engine.history[self.engine.i if self.engine.game_over
+                else self.engine.i - 1]['guess']:
                     pos, cap, guess = capture
                     pygame.draw.rect(self.window,
                                      self.colors['orange'],
@@ -731,5 +780,5 @@ if __name__ == '__main__':
                      Piece('M', (2, 7), color='Blue')]
     # engine.setup = False
     # engine.history.append(engine.move_dict)
-    ls = LocalState(engine, (700, 700))
+    ls = LocalState(engine, (850, 800))
     ls.game_loop()
