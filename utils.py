@@ -2,6 +2,7 @@ from typing import Callable, Any
 import socket
 import pickle
 import datetime
+import os
 
 
 def transmitter_protocol(sock: socket.socket, data: Any):
@@ -42,7 +43,13 @@ def receiver_protocol(sock: socket.socket) -> Any:
 
 
 def log_error(data: bytes):
-    with open(f"/error_log/log_{datetime.datetime.today():%H_%M_%S}", "wb") as file:
+    os.makedirs("error_log/", exist_ok=True)
+    with open(f"error_log/log_{datetime.datetime.today():%H_%M_%S}.bin", "wb+") as file:
+        print(file.writable())
         file.write(data)
+    file.close()
 
+
+if __name__ == '__main__':
+    log_error(b'sajasdmnzxc')
 
