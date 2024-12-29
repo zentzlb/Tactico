@@ -6,7 +6,7 @@ Color: TypeAlias = tuple[int, int, int]
 
 COLORS = {'red': (150, 70, 70),
           'blue': (70, 70, 140),
-          'green': (0, 140, 0),
+          'green': (20, 120, 20),
           'black': (0, 0, 0),
           'grey': (100, 100, 100),
           'cloud': (160, 160, 160),

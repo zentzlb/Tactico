@@ -441,7 +441,12 @@ class LocalState:
                                            self.fonts,
                                            text=chr(164),
                                            color=self.colors['purple'],
-                                           func=lambda *args, **kwargs: self.switch())}
+                                           func=lambda *args, **kwargs: self.switch()),
+                          (-3, -3): Button((180 + h, y, 150, h),
+                                           self.fonts,
+                                           text='Refresh',
+                                           color=self.colors['green'],
+                                           func=lambda *args, **kwargs: self.submit('resend'))}
         self.buttons = piece_buttons | move_buttons | cap_buttons | other_buttons
 
     def make_buttons(self):

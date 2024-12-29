@@ -170,6 +170,9 @@ class Engine:
                 print('item not found')
                 return False
 
+    def resend(self):
+        pass
+
     def inc_up(self):
         if self.index < len(self.history) - 1:
             self.index += 1

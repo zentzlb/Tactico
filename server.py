@@ -112,18 +112,23 @@ class Server:
         while True:
 
             try:
-                if (msg := receiver_protocol(conn)) == 'resend':
-                    self.send_all()
-                else:
-                    self.player_msg[addr] = msg
-                    self.up()
-                    print(self.player_msg[addr])
+                # if (msg := receiver_protocol(conn)) == 'resend':
+                #     self.send_all()
+                # else:
+                msg = receiver_protocol(conn)
+                self.player_msg[addr] = msg
+                self.up()
+                print(self.player_msg[addr])
             except EOFError:
                 print('EOF error, get help')
                 return
             except ConnectionResetError as error:
                 print(error)
                 return
+            except KeyError as error:
+                print(error.__str__())
+                print(f"{addr} not in player_msg")
+
 
     def send_all(self):
         """

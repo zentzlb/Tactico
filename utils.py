@@ -35,9 +35,10 @@ def receiver_protocol(sock: socket.socket) -> Any:
             try:
                 return package.decode("utf-8")[:-1]
             except UnicodeDecodeError:
-                transmitter_protocol(sock, 'resend'.encode())
+                # transmitter_protocol(sock, 'resend'.encode())
                 print('Corrupted Data')
                 log_error(package)
+
     except ConnectionAbortedError:
         print('Connection Aborted')
 

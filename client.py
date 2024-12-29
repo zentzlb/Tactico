@@ -59,6 +59,7 @@ class Client:
             while self.listen:
                 try:
                     self.data = receiver_protocol(s)
+                    # print(self.data)
                     self.up()
                 except (EOFError, ConnectionResetError) as e:
                     print(e)
