@@ -1,17 +1,19 @@
 import time
 
 import pygame
-from typing import Callable
 from button import Button, PieceButton, GameSquare
 from game_engine import Engine
 from game_map import MAP1
-from game_types import iPair, sPair, Color, COLORS, RULES
+from game_types import iPair, sPair, COLORS, RULES
 from pieces import Piece
-from functools import partial, partialmethod
+from functools import partial
 from client import Client
-from collections import defaultdict
-import socket
-import pickle
+from popup_class import PopUp
+from host import Host
+from game_engine import Engine
+from game_map import MAP1
+from server import Server
+
 
 pygame.init()
 
@@ -44,7 +46,8 @@ class LocalState:
         self.guess_target: iPair | sPair | tuple = tuple()
         self.client = client_
         self.make_background()
-        self.images = {rank: pygame.image.load(f"assets\\{rank}.png") for rank in self.engine.total_pieces}
+        self.images = {rank: pygame.image.load(f"assets\\{rank}.png") for rank in
+                       self.engine.total_pieces}
 
     @property
     def team(self) -> str:
@@ -77,7 +80,8 @@ class LocalState:
         """
         if self.selected in self.buttons and not self.engine.move:
             if type(button := self.buttons[self.selected]) is PieceButton and not self.engine.setup:
-                positions = {*{piece.pos for piece in self.engine.position}, *self.engine.map.obstacles}
+                positions = {*{piece.pos for piece in self.engine.position},
+                             *self.engine.map.obstacles}
                 return button.piece.get_moves(positions,
                                               self.engine.map.x_range,
                                               self.engine.map.y_range)
@@ -179,12 +183,18 @@ class LocalState:
     def connect(self):
         if type(self.client) is Client:
             self.client.close()
-        self.client = Client(socket.gethostbyname('DEEP-BLUE'), 5555, up=self.update, end=self.end)
+
+        popup = PopUp()
+        host_, ip, port = popup.main()
+        print(host_, ip, port)
+        if host_:
+            Host(Server(port), Engine(MAP1))
+        self.client = Client(ip, port, up=self.update, end=self.end)
         self.client.start_thread()
         time.sleep(0.1)
         if self.set_mode(self.client.team):
             self.update()
-            return True
+            return True 
         self.set_mode('main menu')
         return False
 
@@ -233,6 +243,8 @@ class LocalState:
         if mode in self.modes:
             if mode == 'main menu':
                 self.engine.restart()
+                if type(self.client) is Client:
+                    self.client.close()
             self.game_mode = mode
             self.make_background()
             self.make_buttons()
@@ -245,9 +257,11 @@ class LocalState:
         select or deselect piece
         :param button: piece button
         """
-        if self.selected == button.piece.pos or (not self.engine.setup and button.piece.rank in ('F', 'M')):
+        if self.selected == button.piece.pos or (
+                not self.engine.setup and button.piece.rank in ('F', 'M')):
             self.selected = tuple()
-        elif button.piece.color == self.engine.turn or (self.engine.setup and button.piece.color == self.team):
+        elif button.piece.color == self.engine.turn or (
+                self.engine.setup and button.piece.color == self.team):
             self.selected = button.piece.pos
         self.make_buttons()
 
@@ -350,7 +364,8 @@ class LocalState:
                                              pc,
                                              self.colors['black'],
                                              self.fonts,
-                                             image=self.images[pc.rank] if self.draw_image else None,
+                                             image=self.images[
+                                                 pc.rank] if self.draw_image else None,
                                              func=self.piece_fn)
                          for pc in self.engine.position
                          if pc.color == self.team}
@@ -382,7 +397,8 @@ class LocalState:
                                       self.fonts,
                                       color=self.colors['white'],
                                       rect_width=4,
-                                      func=partial(self.submit_capture, self.selected, self.guess_target))}
+                                      func=partial(self.submit_capture, self.selected,
+                                                   self.guess_target))}
                 cap_buttons = guesses | capture
 
             elif self.piece.rank == '1':
@@ -665,7 +681,8 @@ class LocalState:
                                      width=2)
                     pygame.draw.rect(self.window,
                                      self.colors['orange'],
-                                     self.game_squares[(self.engine.history[-1]['turn'], guess)].rect,
+                                     self.game_squares[
+                                         (self.engine.history[-1]['turn'], guess)].rect,
                                      width=2)
 
         if self.selected:
@@ -674,7 +691,8 @@ class LocalState:
                              self.game_squares[self.selected].rect,
                              width=3)
 
-        self.draw_rect(pygame.Rect(self.size[0] - 120, 0, 120, 50), self.engine.turn.lower(), self.game_mode)
+        self.draw_rect(pygame.Rect(self.size[0] - 120, 0, 120, 50), self.engine.turn.lower(),
+                       self.game_mode)
 
         pygame.display.update()
 
@@ -700,7 +718,8 @@ class LocalState:
                     return
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
-                    buttons = [button for button in self.buttons.values() if button.collidepoint(pos)]
+                    buttons = [button for button in self.buttons.values() if
+                               button.collidepoint(pos)]
                     for button in buttons:
                         button()
 

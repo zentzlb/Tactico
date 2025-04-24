@@ -21,9 +21,6 @@ class Host:
         :param kwargs: keyword arguments
         :return: method return
         """
-        # print(method)
-        # print(args)
-        # print(kwargs)
         try:
             return self.engine.__getattribute__(method)(*args, **kwargs)
         except AttributeError as error:
