@@ -23,7 +23,6 @@ class Server:
 
     def close(self):
         self.run = False
-        raise SystemExit
 
     def reset(self):
         self.players = {'Red': dict(),

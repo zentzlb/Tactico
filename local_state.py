@@ -1,3 +1,4 @@
+import socket
 import time
 
 import pygame
@@ -14,7 +15,6 @@ from game_engine import Engine
 from game_map import MAP1
 from server import Server
 
-
 pygame.init()
 
 
@@ -28,7 +28,6 @@ class LocalState:
              'small': pygame.font.SysFont('Agency FB', 16)}
 
     def __init__(self, my_engine: Engine, size: iPair, client_: Client = None):
-
         self.run = True
         self.draw_image = False
         self.size = size
@@ -45,6 +44,7 @@ class LocalState:
         self.selected: iPair | sPair | tuple = tuple()
         self.guess_target: iPair | sPair | tuple = tuple()
         self.client = client_
+        self.host: None | Host = None
         self.make_background()
         self.images = {rank: pygame.image.load(f"assets\\{rank}.png") for rank in
                        self.engine.total_pieces}
@@ -87,7 +87,6 @@ class LocalState:
                                               self.engine.map.y_range)
 
             elif self.engine.setup:
-
                 if type(self.selected[0]) is str:
                     if not self.engine.piece_bank[self.team][self.selected[1]] > 0:
                         return []
@@ -168,15 +167,15 @@ class LocalState:
 
         size = self.square_size
         board_squares: dict[tuple, GameSquare] = {
-            (i, j): GameSquare(self.i2x(i, size), self.i2x(j, size), size, size, (i, j))
-            for i in range(self.game_w) for j in range(self.game_h)}
+                (i, j): GameSquare(self.i2x(i, size), self.i2x(j, size), size, size, (i, j))
+                for i in range(self.game_w) for j in range(self.game_h)}
 
         bank_squares: dict[tuple, GameSquare] = {
-            (color, rank):
-                GameSquare(self.i2x(i, size), self.i2x(ind(color), size), size,
-                           size, (color, rank))
-            for color in self.engine.piece_bank
-            for i, rank in enumerate(self.engine.piece_bank[color])}
+                (color, rank):
+                    GameSquare(self.i2x(i, size), self.i2x(ind(color), size), size,
+                               size, (color, rank))
+                for color in self.engine.piece_bank
+                for i, rank in enumerate(self.engine.piece_bank[color])}
 
         return board_squares | bank_squares
 
@@ -188,13 +187,18 @@ class LocalState:
         host_, ip, port = popup.main()
         print(host_, ip, port)
         if host_:
-            Host(Server(port), Engine(MAP1))
+            if self.host:
+                print('closing host')
+                self.host.close()
+                print('host closed')
+            self.host = Host(Server(port), Engine(MAP1))
+            print('made new host')
         self.client = Client(ip, port, up=self.update, end=self.end)
         self.client.start_thread()
         time.sleep(0.1)
         if self.set_mode(self.client.team):
             self.update()
-            return True 
+            return True
         self.set_mode('main menu')
         return False
 
@@ -622,7 +626,6 @@ class LocalState:
         self.window.blit(text_surface, (xt, yt))
 
     def draw(self):
-
         self.window.blit(self.background, (0, 0))
 
         # Rectangle Dimensions
@@ -630,7 +633,6 @@ class LocalState:
         rect_width = 3
 
         if self.game_mode != 'main menu':
-
             for obs in self.engine.map.obstacles:
                 i, j = obs
                 pygame.draw.rect(self.window, self.colors['black'],

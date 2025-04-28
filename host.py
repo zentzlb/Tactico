@@ -13,6 +13,13 @@ class Host:
         self.server.up = self.check_submissions
         self.update()
 
+    def close(self):
+        """
+        ends socket connection
+        """
+        self.server.close()
+
+
     def submit(self, method: str, *args, **kwargs) -> Any:
         """
         submits request to game engine
