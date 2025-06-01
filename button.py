@@ -52,6 +52,16 @@ class Button(pygame.FRect):
             self.draw_text(surf)
         self.draw_subtext(surf)
 
+    def draw_outline(self, surf: pygame.Surface, width: int = 2) -> None:
+        """
+        draw_game button on a surface
+        :param surf: surface
+        :param width: outline width
+        :return:
+        """
+        pygame.draw.rect(surf, self.color, (self.x-width, self.y-width, self.width+2*width,
+                                                self.height+2*width), width=width)
+
     def draw_text(self, surf: pygame.Surface) -> None:
         """
         blits text onto surface centered on centerx, centery

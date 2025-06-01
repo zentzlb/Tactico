@@ -36,6 +36,8 @@ class LocalState:
         self.modes = {'main menu', 'single player', 'waiting', 'review', 'Red', 'Blue'}
         self.main_menu = {'Single Player': partial(self.set_mode, 'single player'),
                           'Multiplayer': lambda *args, **kwargs: self.connect(),
+                          'Reset': lambda *args, **kwargs: self.reset(),
+                          'Close Server': lambda *args, **kwargs: self.close_all(),
                           'Quit': lambda *args, **kwargs: self.quit()}
         self.window = pygame.display.set_mode(size)
         self.background = pygame.Surface(self.size)
@@ -179,24 +181,46 @@ class LocalState:
 
         return board_squares | bank_squares
 
-    def connect(self):
-        if type(self.client) is Client:
+    def reset(self):
+        self.engine.restart()
+
+    def close_host(self):
+        if self.host:
+            print('closing host')
+            self.host.close()
+            self.host = None
+
+    def close_client(self):
+        if self.client:
             self.client.close()
+            self.client = None
+
+
+    def close_all(self):
+        self.close_host()
+        self.close_client()
+        time.sleep(0.4)
+        self.make_buttons()
+
+
+    def connect(self):
+        # if type(self.client) is Client:
+        #     self.client.close()
 
         popup = PopUp()
         host_, ip, port = popup.main()
         print(host_, ip, port)
         if host_:
-            if self.host:
-                print('closing host')
-                self.host.close()
-                print('host closed')
-            self.host = Host(Server(port), Engine(MAP1))
+            self.close_host()
+            time.sleep(0.4)
+            self.host = Host(Server(port), self.engine)
             print('made new host')
+        self.close_client()
         self.client = Client(ip, port, up=self.update, end=self.end)
         self.client.start_thread()
         time.sleep(0.1)
         if self.set_mode(self.client.team):
+
             self.update()
             return True
         self.set_mode('main menu')
@@ -224,9 +248,7 @@ class LocalState:
         """
         handles Client connection loss
         """
-        if self.client:
-            self.client.close()
-            self.client = None
+        self.close_client()
         self.set_mode('main menu')
 
     def quit(self):
@@ -246,9 +268,12 @@ class LocalState:
         self.selected = tuple()
         if mode in self.modes:
             if mode == 'main menu':
-                self.engine.restart()
-                if type(self.client) is Client:
-                    self.client.close()
+                # self.engine.restart()
+                self.close_client()
+                # if self.host:
+                #     self.host.close()
+                #     self.host = None
+
             self.game_mode = mode
             self.make_background()
             self.make_buttons()
@@ -357,7 +382,8 @@ class LocalState:
                                        color=self.colors['red'],
                                        text_color=self.colors['yellow'],
                                        func=self.main_menu[option])
-                        for i, option in enumerate(self.main_menu)}
+                        for i, option in enumerate(self.main_menu)
+                        if option != 'Close Server' or self.host}
 
     def game_buttons(self) -> None:
         """
@@ -625,7 +651,7 @@ class LocalState:
                                                   wraplength=self.size[0] - xt - 50)
         self.window.blit(text_surface, (xt, yt))
 
-    def draw(self):
+    def draw(self, buttons: list[Button | PieceButton]):
         self.window.blit(self.background, (0, 0))
 
         # Rectangle Dimensions
@@ -696,6 +722,8 @@ class LocalState:
         self.draw_rect(pygame.Rect(self.size[0] - 120, 0, 120, 50), self.engine.turn.lower(),
                        self.game_mode)
 
+        for button in buttons:
+            button.draw_outline(self.window)
         pygame.display.update()
 
     def game_loop(self):
@@ -710,21 +738,19 @@ class LocalState:
 
         while self.run:
             clock.tick(fps)
-
-            self.draw()
+            pos = pygame.mouse.get_pos()
+            buttons = [button for button in self.buttons.values() if
+                       button.collidepoint(pos)]
+            self.draw(buttons)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # quit if user quits
                     self.run = False
                     pygame.quit()
                     return
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    pos = pygame.mouse.get_pos()
-                    buttons = [button for button in self.buttons.values() if
-                               button.collidepoint(pos)]
+                if event.type == pygame.MOUSEBUTTONDOWN:
                     for button in buttons:
                         button()
-
                 elif event.type == pygame.KEYDOWN:
                     keys = pygame.key.get_pressed()
                     if keys[pygame.K_ESCAPE]:

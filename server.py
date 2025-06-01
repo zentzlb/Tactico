@@ -19,7 +19,14 @@ class Server:
         self.host = socket.gethostbyname(socket.gethostname())
         # self.update_time = time.time()
         self.run = True
+        self.stuff = set()
         print(self.host)
+
+    def __str__(self):
+        return f'{self.host, self.port}'
+
+    def __repr__(self):
+        return self.__str__()
 
     def close(self):
         self.run = False
@@ -81,9 +88,11 @@ class Server:
         look for connections
         """
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            self.stuff.add(sock)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((self.host, self.port))
             sock.listen()
+            sock.settimeout(0.3)
             while self.run:
                 if not (self.players['Red'] and self.players['Blue']):
                     try:
@@ -93,13 +102,18 @@ class Server:
                             conn.close()
                             print('Player Already Connected')
                         else:
+                            self.stuff.add(sock)
                             color = self.assign_player(conn, addr)
                             transmitter_protocol(conn, color.encode())
                             transmitter_protocol(conn, self.pickled_data)
                             print(f"\nConnected to: {addr}")
                             start_new_thread(self.threaded_client, (conn, addr, color))
+                    except TimeoutError as error:
+                        if not self.run:
+                            print('Timeout Reached -> preparing to close')
                     except OSError as error:
                         print(error)
+        print(f'server ({self}) closing -> no longer looking for connections \n')
 
     def receive(self, conn: socket.socket, addr: tuple[str, int]) -> Any:
         """
@@ -108,7 +122,7 @@ class Server:
         :param addr: client address
         :return: object
         """
-        while True:
+        while self.run:
 
             try:
                 # if (msg := receiver_protocol(conn)) == 'resend':
@@ -127,6 +141,7 @@ class Server:
             except KeyError as error:
                 print(error.__str__())
                 print(f"{addr} not in player_msg")
+        print(f'server ({self}) closing -> no longer receiving \n')
 
 
     def send_all(self):
@@ -144,7 +159,7 @@ class Server:
                     if addr in self.player_msg:
                         self.player_msg.pop(addr)
                     print(error.__cause__)
-                    print(f'Connection to {addr} Lost -> Closing Thread')
+                    print(f'Connection to {addr} Lost -> Closing Thread \n')
                     print(self.players)
                     return
 
@@ -161,10 +176,9 @@ class Server:
 
         print(self.players)
 
-        run = True
         with conn:
             # start_new_thread(self.receive, (conn, addr))
-            while run:
+            while self.run:
                 try:
                     self.player_msg[addr] = receiver_protocol(conn)
                     print(self.player_msg[addr])
@@ -178,6 +192,8 @@ class Server:
                     print(f'Connection to {addr} Lost -> Closing Thread')
                     print(self.players)
                     return
+
+        print(f'server ({self}) closing -> no longer communicating with clients \n')
 
 
 if __name__ == '__main__':
