@@ -183,6 +183,7 @@ class LocalState:
 
     def reset(self):
         self.engine.restart()
+        self.make_buttons()
 
     def close_host(self):
         if self.host:
@@ -255,8 +256,10 @@ class LocalState:
         """
         ends game
         """
-        pygame.quit()
+        self.close_host()
+        self.close_client()
         self.run = False
+        pygame.quit()
 
     def set_mode(self, mode: str, *args, **kwargs) -> bool:
         """
@@ -379,7 +382,9 @@ class LocalState:
                                         height),
                                        self.fonts,
                                        text=option,
-                                       color=self.colors['red'],
+                                       color=self.colors['red'] if option != 'Reset' or
+                                                                   len(self.engine.pieces) != 0
+                                       else self.colors['grey'],
                                        text_color=self.colors['yellow'],
                                        func=self.main_menu[option])
                         for i, option in enumerate(self.main_menu)
@@ -745,8 +750,7 @@ class LocalState:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # quit if user quits
-                    self.run = False
-                    pygame.quit()
+                    self.quit()
                     return
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     for button in buttons:
