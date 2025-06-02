@@ -7,19 +7,19 @@ from copy import deepcopy
 import pickle
 
 STRENGTH = {
-    '10': 10,
-    '9': 9,
-    '8': 8,
-    '7': 8,
-    '6': 7,
-    '5': 5,
-    '4': 4,
-    '3': 5,
-    '2': 4,
-    '1': 8,
-    'S': 3,
-    'M': 2,
-    'F': 0,
+        '10': 10,
+        '9': 9,
+        '8': 8,
+        '7': 8,
+        '6': 7,
+        '5': 5,
+        '4': 4,
+        '3': 5,
+        '2': 4,
+        '1': 8,
+        'S': 3,
+        'M': 2,
+        'F': 0,
 }
 
 
@@ -29,19 +29,19 @@ class Engine:
     """
 
     total_pieces = {
-        '10': 1,
-        '9': 1,
-        '8': 1,
-        '7': 1,
-        '6': 2,
-        '5': 2,
-        '4': 2,
-        '3': 5,
-        '2': 6,
-        '1': 2,
-        'S': 1,
-        'M': 5,
-        'F': 1,
+            '10': 1,
+            '9': 1,
+            '8': 1,
+            '7': 1,
+            '6': 2,
+            '5': 2,
+            '4': 2,
+            '3': 5,
+            '2': 6,
+            '1': 2,
+            'S': 1,
+            'M': 5,
+            'F': 1,
     }
 
     def __init__(self, my_map: Map):
@@ -114,7 +114,7 @@ class Engine:
         return {'Red': sum([STRENGTH[piece.rank] if piece.hidden else STRENGTH[piece.rank] / 2
                             for piece in self.pieces if piece.color == 'Red']),
                 'Blue': sum([STRENGTH[piece.rank] if piece.hidden else STRENGTH[piece.rank] / 2
-                            for piece in self.pieces if piece.color == 'Blue'])
+                             for piece in self.pieces if piece.color == 'Blue'])
                 }
 
     @property
@@ -369,5 +369,5 @@ class Engine:
 
 if __name__ == '__main__':
     eng = Engine(MAP1)
-    print(eng.data)
+    # print(eng.data)
     pass

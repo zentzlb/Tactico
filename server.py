@@ -131,7 +131,7 @@ class Server:
                 msg = receiver_protocol(conn)
                 self.player_msg[addr] = msg
                 self.up()
-                print(self.player_msg[addr])
+                # print(self.player_msg[addr])
             except EOFError:
                 print('EOF error, get help')
                 return
@@ -181,7 +181,7 @@ class Server:
             while self.run:
                 try:
                     self.player_msg[addr] = receiver_protocol(conn)
-                    print(self.player_msg[addr])
+                    # print(self.player_msg[addr])
                     self.up()
 
                 except (ConnectionResetError, ConnectionAbortedError) as error:

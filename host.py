@@ -62,7 +62,7 @@ class Host:
             self.server.player_msg = {}
         elif data := self.server[self.engine.turn]:
             print(f"{self.engine.turn} has submitted:")
-            print(data)
+            # print(data)
             try:
                 self.submit(data[0], *data[1:])
                 self.update()
